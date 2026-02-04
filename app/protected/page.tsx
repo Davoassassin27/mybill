@@ -1,54 +1,95 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { Suspense } from "react";
 
-// --- CONFIGURACIÓN CRÍTICA PARA VERCEL ---
-// Esto le dice a Next.js: "Nunca intentes generar esta página estática. Hazla en el momento."
+// Forzamos dinamismo y desactivamos caché para asegurar datos frescos
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
-// ----------------------------------------
+export const fetchCache = "force-no-store";
 
-export default async function ProtectedPage() {
+// 1. Componente que hace el trabajo pesado (Async)
+async function TransactionList() {
   const supabase = await createClient();
+  
+  // Verificamos usuario dentro del componente de datos
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null; // El redirect lo maneja el padre o middleware
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: transactions } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("user_id", user.id) // Filtrar por usuario explícitamente es buena práctica
+    .order("created_at", { ascending: false });
 
-  if (!user) {
-    return redirect("/login");
+  if (!transactions || transactions.length === 0) {
+    return <p className="text-gray-500 text-center">No hay datos aún.</p>;
   }
 
-  // Server Action para guardar
+  return (
+    <div className="space-y-2">
+      <h2 className="text-lg font-semibold">Movimientos Recientes</h2>
+      {transactions.map((t) => (
+        <div
+          key={t.id}
+          className="flex justify-between items-center p-3 border rounded bg-white shadow-sm"
+        >
+          <div>
+            <p className="font-medium">{t.description}</p>
+            <p className="text-xs text-gray-500">
+              {new Date(t.created_at).toLocaleDateString()}
+            </p>
+          </div>
+          <span
+            className={`font-bold ${
+              t.type === "ingreso" ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {t.type === "ingreso" ? "+" : "-"}${t.amount}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// 2. Página Principal (El esqueleto)
+export default async function ProtectedPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Action del Formulario
   const addTransaction = async (formData: FormData) => {
     "use server";
     const supabase = await createClient();
+    
+    // Necesitamos el usuario de nuevo para el insert
+    const { data: { user } } = await supabase.auth.getUser();
+    if(!user) return;
+
     const amount = formData.get("amount");
     const description = formData.get("description");
-    const type = formData.get("type"); 
+    const type = formData.get("type");
 
-    const { error } = await supabase.from("transactions").insert({
+    await supabase.from("transactions").insert({
       amount: Number(amount),
       description: String(description),
       type: String(type),
       category: "General",
       user_id: user.id,
     });
-
-    if (error) console.error(error);
+    
     revalidatePath("/protected");
   };
-
-  // Fetch de datos
-  const { data: transactions } = await supabase
-    .from("transactions")
-    .select("*")
-    .order("created_at", { ascending: false });
 
   return (
     <div className="max-w-md mx-auto p-4 space-y-6">
       <h1 className="text-2xl font-bold text-center mb-6">Mi Billetera 💸</h1>
 
+      {/* Formulario (Es estático, carga rápido) */}
       <div className="bg-gray-100 p-4 rounded-lg shadow-sm">
         <form action={addTransaction} className="flex flex-col gap-3">
           <div className="flex gap-2">
@@ -81,32 +122,10 @@ export default async function ProtectedPage() {
         </form>
       </div>
 
-      <div className="space-y-2">
-        <h2 className="text-lg font-semibold">Movimientos Recientes</h2>
-        {transactions?.map((t) => (
-          <div
-            key={t.id}
-            className="flex justify-between items-center p-3 border rounded bg-white shadow-sm"
-          >
-            <div>
-              <p className="font-medium">{t.description}</p>
-              <p className="text-xs text-gray-500">
-                {new Date(t.created_at).toLocaleDateString()}
-              </p>
-            </div>
-            <span
-              className={`font-bold ${
-                t.type === "ingreso" ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {t.type === "ingreso" ? "+" : "-"}${t.amount}
-            </span>
-          </div>
-        ))}
-        {(!transactions || transactions.length === 0) && (
-          <p className="text-gray-500 text-center">No hay datos aún.</p>
-        )}
-      </div>
+      {/* Lista de Datos (Envuelto en Suspense para calmar al compilador) */}
+      <Suspense fallback={<div className="text-center py-4">Cargando movimientos...</div>}>
+        <TransactionList />
+      </Suspense>
     </div>
   );
 }
