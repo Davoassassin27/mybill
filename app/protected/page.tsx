@@ -3,9 +3,6 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { Suspense } from "react";
 
-// Forzamos dinamismo y desactivamos caché para asegurar datos frescos
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
 
 // 1. Componente que hace el trabajo pesado (Async)
 async function TransactionList() {
