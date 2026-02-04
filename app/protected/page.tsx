@@ -2,12 +2,15 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
+// --- CONFIGURACIÓN CRÍTICA PARA VERCEL ---
+// Esto le dice a Next.js: "Nunca intentes generar esta página estática. Hazla en el momento."
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+// ----------------------------------------
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
 
-  // 1. Verificar Auth
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -16,15 +19,14 @@ export default async function ProtectedPage() {
     return redirect("/login");
   }
 
-  // 2. Acción de Servidor para guardar datos (Backend logic en el mismo archivo por ahora)
+  // Server Action para guardar
   const addTransaction = async (formData: FormData) => {
     "use server";
     const supabase = await createClient();
     const amount = formData.get("amount");
     const description = formData.get("description");
-    const type = formData.get("type"); // 'gasto' o 'ingreso'
-    
-    // Hardcodeamos categoría por hoy para ir rápido
+    const type = formData.get("type"); 
+
     const { error } = await supabase.from("transactions").insert({
       amount: Number(amount),
       description: String(description),
@@ -34,10 +36,10 @@ export default async function ProtectedPage() {
     });
 
     if (error) console.error(error);
-    revalidatePath("/protected"); // Refresca la lista sin recargar
+    revalidatePath("/protected");
   };
 
-  // 3. Fetch de datos
+  // Fetch de datos
   const { data: transactions } = await supabase
     .from("transactions")
     .select("*")
@@ -47,7 +49,6 @@ export default async function ProtectedPage() {
     <div className="max-w-md mx-auto p-4 space-y-6">
       <h1 className="text-2xl font-bold text-center mb-6">Mi Billetera 💸</h1>
 
-      {/* Formulario de Entrada */}
       <div className="bg-gray-100 p-4 rounded-lg shadow-sm">
         <form action={addTransaction} className="flex flex-col gap-3">
           <div className="flex gap-2">
@@ -80,7 +81,6 @@ export default async function ProtectedPage() {
         </form>
       </div>
 
-      {/* Lista de Movimientos */}
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">Movimientos Recientes</h2>
         {transactions?.map((t) => (
@@ -103,7 +103,7 @@ export default async function ProtectedPage() {
             </span>
           </div>
         ))}
-        {transactions?.length === 0 && (
+        {(!transactions || transactions.length === 0) && (
           <p className="text-gray-500 text-center">No hay datos aún.</p>
         )}
       </div>
