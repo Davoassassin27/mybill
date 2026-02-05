@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
-// CORRECCIÓN AQUÍ: Quitamos "/dist/types" y lo importamos directo
+// SOLUCIÓN: Importar directamente desde "next-themes"
 import { type ThemeProviderProps } from "next-themes";
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
