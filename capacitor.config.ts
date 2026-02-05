@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'public', // Next.js usa public para estáticos
   server: {
     // 🔴 IMPORTANTE: Pon aquí tu URL real de Vercel
-    url: 'mybill-ten.vercel.app', 
+    url: 'https://mybill-ten.vercel.app', 
     cleartext: true
   }
 };
