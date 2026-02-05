@@ -2,6 +2,17 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import type { Viewport } from 'next';
+
+// Agrega esto debajo de tus imports
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false, // Evita que hagan zoom con los dedos
+  themeColor: '#000000', // Color de la barra de estado
+};
+
 
 const inter = Inter({ subsets: ["latin"] });
 
