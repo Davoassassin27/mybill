@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { Suspense } from "react";
 import NotesSection from "@/components/NotesSection";
-import DashboardClient from "@/components/DashboardClient"; // Importa el nuevo componente
+import DashboardClient from "@/components/DashboardClient";
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
@@ -13,15 +13,15 @@ export default async function ProtectedPage() {
     redirect("/auth/login");
   }
 
-  // Fetch de transacciones (SERVER SIDE)
+  // Fetch de transacciones
   const { data: transactions } = await supabase
     .from("transactions")
     .select("*")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
-    .limit(50); // Traemos más para ver historial
+    .limit(50);
 
-  // Acción para añadir (Sigue siendo Server Action)
+  // Acción para añadir
   const addTransaction = async (formData: FormData) => {
     "use server";
     const supabase = await createClient();
@@ -45,22 +45,15 @@ export default async function ProtectedPage() {
   };
 
   return (
-    <div className="min-h-screen relative flex flex-col md:flex-row">
-        {/* IZQUIERDA: NOTAS (Componente de Servidor Independiente) */}
-        <div className="w-full md:w-80 md:h-screen md:sticky md:top-0 p-4 z-10">
-          <Suspense fallback={<div className="h-full bg-gray-100 rounded-[2rem] animate-pulse"/>}>
+    // Pasamos NotesSection como children para que el Grid del cliente lo maneje
+    <DashboardClient 
+        transactions={transactions || []} 
+        user={user} 
+        addTransactionAction={addTransaction}
+    >
+        <Suspense fallback={<div className="h-full bg-gray-100 dark:bg-gray-800 rounded-[2rem] animate-pulse"/>}>
             <NotesSection />
-          </Suspense>
-        </div>
-
-        {/* CENTRO Y DERECHA: DASHBOARD CLIENTE (Maneja la conversión y borrado) */}
-        <div className="flex-1">
-            <DashboardClient 
-                transactions={transactions || []} 
-                user={user} 
-                addTransactionAction={addTransaction}
-            />
-        </div>
-    </div>
+        </Suspense>
+    </DashboardClient>
   );
 }
