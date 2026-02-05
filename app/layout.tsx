@@ -1,24 +1,34 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import type { Viewport } from 'next';
-
-// Agrega esto debajo de tus imports
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false, // Evita que hagan zoom con los dedos
-  themeColor: '#000000', // Color de la barra de estado
-};
-
 
 const inter = Inter({ subsets: ["latin"] });
 
+// 1. CONFIGURACIÓN DEL VIEWPORT (Solo una vez)
+// Esto evita que el usuario haga zoom y hace que se sienta nativa en móviles
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#000000",
+};
+
+// 2. METADATOS Y PWA (Para iPhone y Android)
 export const metadata: Metadata = {
-  title: "MyBill App",
-  description: "Finanzas personales",
+  title: "MyBill",
+  description: "Control de finanzas personales",
+  manifest: "/manifest.json", // Tu archivo de configuración Android/Web
+  appleWebApp: {
+    capable: true, // Activa el modo App en iOS
+    statusBarStyle: "black-translucent", // Barra de estado integrada
+    title: "MyBill",
+  },
+  icons: {
+    icon: "/icon.png", // Icono general
+    apple: "/icon.png", // Icono para iPhone
+  },
 };
 
 export default function RootLayout({
@@ -28,19 +38,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen antialiased neon-gradient`}>
+      <body className={inter.className}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
-          {/* CAMBIO AQUÍ: Quitamos 'items-center' para que los hijos ocupen todo el ancho */}
-          <main className="min-h-screen flex flex-col">
-            <div className="flex-1 w-full flex flex-col">
-              {children}
-            </div>
-          </main>
+          {children}
         </ThemeProvider>
       </body>
     </html>
